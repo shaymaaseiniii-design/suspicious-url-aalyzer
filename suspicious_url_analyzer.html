@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suspicious URL Analyzer</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --border: #1f2937;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --danger: #ef4444;
+      --danger-bg: rgba(239, 68, 68, 0.12);
+      --safe: #10b981;
+      --safe-bg: rgba(16, 185, 129, 0.12);
+      --accent: #3b82f6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2.5rem 1rem;
+    }
+    .container {
+      width: 100%;
+      max-width: 820px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+      color: #ffffff;
+    }
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    .form-group {
+      display: flex;
+      gap: 0.75rem;
+    }
+    input[type="text"] {
+      flex: 1;
+      background: #0d1321;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.85rem 1.1rem;
+      color: #ffffff;
+      font-size: 1rem;
+      font-family: monospace;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+    button.analyze-btn {
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.85rem 1.75rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    button.analyze-btn:hover {
+      opacity: 0.92;
+    }
+    button.analyze-btn:active {
+      transform: scale(0.98);
+    }
+    .samples {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      align-items: center;
+    }
+    .samples-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .sample-pill {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      border-radius: 6px;
+      padding: 0.3rem 0.65rem;
+      font-size: 0.78rem;
+      cursor: pointer;
+      font-family: monospace;
+    }
+    .sample-pill:hover {
+      background: #334155;
+      color: #fff;
+    }
+    .results-container {
+      display: none;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .verdict-banner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.25rem;
+      border-radius: 10px;
+      margin-bottom: 0.5rem;
+    }
+    .verdict-banner.danger {
+      background: var(--danger-bg);
+      border: 1px solid var(--danger);
+      color: #fca5a5;
+    }
+    .verdict-banner.safe {
+      background: var(--safe-bg);
+      border: 1px solid var(--safe);
+      color: #6ee7b7;
+    }
+    .verdict-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+    .verdict-desc {
+      font-size: 0.85rem;
+      margin-top: 0.25rem;
+      opacity: 0.9;
+    }
+    .indicator-card {
+      background: #0d1321;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+    }
+    .indicator-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.6rem;
+    }
+    .rule-name {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+    .badge.danger {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+    .badge.safe {
+      background: var(--safe-bg);
+      color: var(--safe);
+      border: 1px solid var(--safe);
+    }
+    .rule-findings {
+      font-size: 0.9rem;
+      color: #d1d5db;
+      line-height: 1.5;
+    }
+    .rule-details {
+      margin-top: 0.6rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-family: monospace;
+      background: #111827;
+      padding: 0.4rem 0.6rem;
+      border-radius: 4px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Suspicious URL Analyzer</h1>
+      <p class="subtitle">Cybersecurity link triage: Insecure HTTP, Raw IP detection, & Phishing bait analysis</p>
+    </header>
+
+    <div class="card">
+      <form id="analyzerForm" onsubmit="handleAnalyze(event)">
+        <div class="form-group">
+          <input type="text" id="urlInput" placeholder="Enter URL to inspect (e.g. http://192.168.1.1/login/bank)" required>
+          <button type="submit" class="analyze-btn">Analyze</button>
+        </div>
+      </form>
+      <div class="samples">
+        <span class="samples-label">Quick test:</span>
+        <button type="button" class="sample-pill" onclick="loadSample('https://www.google.com')">Safe HTTPS</button>
+        <button type="button" class="sample-pill" onclick="loadSample('http://example.com/login')">HTTP Insecure</button>
+        <button type="button" class="sample-pill" onclick="loadSample('http://192.168.1.50/admin')">Raw IP Host</button>
+        <button type="button" class="sample-pill" onclick="loadSample('https://bank-login-verify-update.com')">Phishing Keywords</button>
+        <button type="button" class="sample-pill" onclick="loadSample('http://185.190.140.22/secure/bank/verify')">Severe Combo</button>
+      </div>
+    </div>
+
+    <div id="results" class="results-container">
+      <div id="verdictBanner" class="verdict-banner">
+        <div>
+          <div id="verdictTitle" class="verdict-title">Analysis Complete</div>
+          <div id="verdictDesc" class="verdict-desc">Evaluation summary</div>
+        </div>
+      </div>
+
+      <!-- Rule 1: HTTP vs HTTPS -->
+      <div class="indicator-card">
+        <div class="indicator-header">
+          <span class="rule-name">1. Protocol Check (HTTP vs HTTPS)</span>
+          <span id="badgeProtocol" class="badge">--</span>
+        </div>
+        <p id="descProtocol" class="rule-findings"></p>
+        <div id="detailProtocol" class="rule-details"></div>
+      </div>
+
+      <!-- Rule 2: Raw IP vs Domain -->
+      <div class="indicator-card">
+        <div class="indicator-header">
+          <span class="rule-name">2. Host Check (Raw IP vs Domain Name)</span>
+          <span id="badgeIp" class="badge">--</span>
+        </div>
+        <p id="descIp" class="rule-findings"></p>
+        <div id="detailIp" class="rule-details"></div>
+      </div>
+
+      <!-- Rule 3: Phishing Keywords -->
+      <div class="indicator-card">
+        <div class="indicator-header">
+          <span class="rule-name">3. Phishing Keywords Check</span>
+          <span id="badgeKeywords" class="badge">--</span>
+        </div>
+        <p id="descKeywords" class="rule-findings"></p>
+        <div id="detailKeywords" class="rule-details"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PHISHING_KEYWORDS = ['login', 'verify', 'update', 'secure', 'bank'];
+
+    function isRawIpAddress(hostname) {
+      const cleanHost = hostname.replace(/^[|]$/g, '');
+      const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+      const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^(([0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4})?::(([0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4})?$/;
+      return ipv4Regex.test(cleanHost) || ipv6Regex.test(cleanHost);
+    }
+
+    function loadSample(url) {
+      document.getElementById('urlInput').value = url;
+      runAnalysis(url);
+    }
+
+    function handleAnalyze(e) {
+      if (e) e.preventDefault();
+      const val = document.getElementById('urlInput').value.trim();
+      if (val) runAnalysis(val);
+    }
+
+    function runAnalysis(rawUrl) {
+      let normalized = rawUrl;
+      let hadProtocol = true;
+
+      if (!/^https?:\/\//i.test(rawUrl)) {
+        hadProtocol = false;
+        normalized = 'http://' + rawUrl;
+      }
+
+      let parsed = null;
+      try {
+        parsed = new URL(normalized);
+      } catch (err) {
+        parsed = null;
+      }
+
+      const hostname = parsed ? parsed.hostname : rawUrl.split('/')[0].split(':')[0];
+      const lower = rawUrl.toLowerCase();
+
+      // Rule 1: HTTP check
+      const isHttp = hadProtocol ? (parsed && parsed.protocol === 'http:') : true;
+      const isHttps = parsed && parsed.protocol === 'https:';
+
+      // Rule 2: Raw IP check
+      const isIp = isRawIpAddress(hostname);
+
+      // Rule 3: Phishing keywords
+      const matched = PHISHING_KEYWORDS.filter(k => lower.includes(k));
+
+      // Update UI
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.style.display = 'flex';
+
+      // Rule 1 UI
+      const bProto = document.getElementById('badgeProtocol');
+      const dProto = document.getElementById('descProtocol');
+      const detProto = document.getElementById('detailProtocol');
+      if (!isHttp && isHttps) {
+        bProto.className = 'badge safe';
+        bProto.textContent = 'SAFE (HTTPS)';
+        dProto.textContent = 'URL utilizes secure TLS/HTTPS encryption. Traffic cannot be intercepted in cleartext.';
+        detProto.textContent = 'Protocol: https://';
+      } else {
+        bProto.className = 'badge danger';
+        bProto.textContent = 'DANGER (Insecure HTTP)';
+        dProto.textContent = 'URL uses unencrypted plaintext HTTP. Susceptible to Man-in-the-Middle (MitM) eavesdropping.';
+        detProto.textContent = 'Protocol: ' + (parsed ? parsed.protocol : 'http:// (unencrypted)');
+      }
+
+      // Rule 2 UI
+      const bIp = document.getElementById('badgeIp');
+      const dIp = document.getElementById('descIp');
+      const detIp = document.getElementById('detailIp');
+      if (isIp) {
+        bIp.className = 'badge danger';
+        bIp.textContent = 'DANGER (Raw IP)';
+        dIp.textContent = 'Direct numerical IP address detected. Legitimate services utilize domains; attackers use raw IPs to bypass DNS reputation filters.';
+        detIp.textContent = 'Host: ' + hostname + ' (Raw IP)';
+      } else {
+        bIp.className = 'badge safe';
+        bIp.textContent = 'SAFE (Domain)';
+        dIp.textContent = 'Standard domain name detected. Matches expected DNS naming convention for legitimate services.';
+        detIp.textContent = 'Host: ' + hostname;
+      }
+
+      // Rule 3 UI
+      const bKw = document.getElementById('badgeKeywords');
+      const dKw = document.getElementById('descKeywords');
+      const detKw = document.getElementById('detailKeywords');
+      if (matched.length > 0) {
+        bKw.className = 'badge danger';
+        bKw.textContent = 'DANGER (' + matched.length + ' keyword' + (matched.length > 1 ? 's' : '') + ')';
+        dKw.textContent = 'Detected phishing keywords: ' + matched.join(', ') + '. Common in credential-harvesting attacks.';
+        detKw.textContent = 'Matches: ' + matched.join(', ');
+      } else {
+        bKw.className = 'badge safe';
+        bKw.textContent = 'SAFE';
+        dKw.textContent = 'No suspicious phishing keywords (login, verify, update, secure, bank) detected.';
+        detKw.textContent = 'Matches: None';
+      }
+
+      // Verdict Banner
+      const isAnyDanger = isHttp || isIp || matched.length > 0;
+      const banner = document.getElementById('verdictBanner');
+      const vTitle = document.getElementById('verdictTitle');
+      const vDesc = document.getElementById('verdictDesc');
+
+      if (isAnyDanger) {
+        banner.className = 'verdict-banner danger';
+        const dangerCount = (isHttp ? 1 : 0) + (isIp ? 1 : 0) + (matched.length > 0 ? 1 : 0);
+        vTitle.textContent = 'Warning: Suspicious Indicators Flagged (' + dangerCount + '/3 Rules Failed)';
+        vDesc.textContent = 'Exercise extreme caution. Do not enter credentials, download payloads, or authorize sessions on this link.';
+      } else {
+        banner.className = 'verdict-banner safe';
+        vTitle.textContent = 'All Checks Passed (3/3 Rules Safe)';
+        vDesc.textContent = 'No HTTP transport risks, raw IP hosts, or high-risk phishing keywords were detected.';
+      }
+    }
+
+    // Auto-analyze default on load
+    window.addEventListener('DOMContentLoaded', () => {
+      runAnalysis(document.getElementById('urlInput').value);
+    });
+  </script>
+</body>
+</html>
